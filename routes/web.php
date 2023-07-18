@@ -1,38 +1,56 @@
 <?php
 
-use App\Http\Controllers\Admin\ForgotPasswordController;
-use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\LoginController;
-use App\Http\Controllers\Admin\RegisterController;
-use App\Http\Controllers\Admin\ResetPasswordController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Admin\VerificationController as AdminVerificationController ;
+use App\Http\Controllers\Admin\LoginController as AdminLoginController;
+use App\Http\Controllers\Admin\RegisterController as AdminRegisterController;
+use App\Http\Controllers\Admin\ResetPasswordController as AdminResetPasswordController;
+use App\Http\Controllers\Admin\ForgotPasswordController as AdminForgotPasswordController;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-Auth::routes();
-
+Auth::routes(['verify' => true]);
 
 Route::middleware(['prevent-back-history'])->group(function(){
-    
-    Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home')->middleware('auth:web');
-    
-    Route::get('admin/dashboard', [AdminController::class, 'index'])->name('admin.home')->middleware('auth:admin');
+
+    Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home')->middleware(['verified']);
+
+    Route::get('admin/dashboard', [AdminController::class, 'index'])->name('admin.home')->middleware(['verified:admin.verfication.notice']);
 
 });
 
+Route::controller(AdminLoginController::class)->group(function(){
 
-Route::get('admin/login', [LoginController::class, 'showAdminLoginForm'])->name('admin.login');
-Route::post('admin/login', [LoginController::class, 'adminLogin']);
-Route::post('admin/logout', [LoginController::class, 'logout'])->name('admin.logout')->middleware('auth:admin');
-Route::get('admin/register', [RegisterController::class, 'showAdminRegisterForm'])->name('admin.register');
-Route::post('admin/register', [RegisterController::class, 'adminRegister']);
+    Route::get('admin/login', 'showAdminLoginForm')->name('admin.login');
+    Route::post('admin/login', 'adminLogin');
+    Route::post('admin/logout', 'logout')->name('admin.logout')->middleware('auth:admin');
+    Route::get('admin/register', 'showAdminRegisterForm')->name('admin.register');
+    Route::post('admin/register', 'adminRegister');
 
+});
 
-Route::get('admin/password/reset', [ForgotPasswordController::class, 'showAdminLinkRequestForm'])->name('admin.password.request');
-Route::post('admin/password/email', [ForgotPasswordController::class, 'sendAdminResetLinkEmail'])->name('admin.password.email');
-Route::get('admin/password/reset/{token}', [ResetPasswordController::class, 'showAdminResetForm'])->name('admin.password.reset');
-Route::post('admin/password/reset', [ResetPasswordController::class, 'adminReset'])->name('admin.password.update');
+Route::controller(AdminForgotPasswordController::class)->group(function(){
 
+    Route::get('admin/password/reset', 'showAdminLinkRequestForm')->name('admin.password.request');
+    Route::post('admin/password/email', 'sendAdminResetLinkEmail')->name('admin.password.email');
+    
+});
+
+Route::controller(AdminResetPasswordController::class)->group(function(){
+
+    Route::get('admin/password/reset/{token}', 'showAdminResetForm')->name('admin.password.reset');
+    Route::post('admin/password/reset', 'adminReset')->name('admin.password.update');
+
+});
+
+Route::controller(AdminVerificationController::class)->group(function(){
+        
+    Route::get('admin/email/verify', 'show')->name('admin.verfication.notice');
+    Route::post('admin/email/resend', 'resend')->name('admin.verification.resend');
+    Route::get('admin/email/verify/{id}/{hash}', 'verify')->name('admin.verification.verify');
+
+});
